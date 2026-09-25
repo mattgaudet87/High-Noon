@@ -5,11 +5,14 @@ import { Stage } from "@/game/config/stages";
 const UNIT_KEYS = Object.keys(UNITS) as UnitKey[];
 const DECISION_INTERVAL = 1.5;
 
-// Reverse of COUNTERS: for a given unit, which unit deals double damage to it.
-const COUNTERED_BY: Record<UnitKey, UnitKey> = UNIT_KEYS.reduce((map, key) => {
-  map[COUNTERS[key]] = key;
+// Reverse of COUNTERS: for a given combat unit, which unit deals double
+// damage to it. Support troops (Doc, Powder Man) have no COUNTERS entry, so
+// they're skipped here and never come back as a "counter pick" below.
+const COUNTERED_BY: Partial<Record<UnitKey, UnitKey>> = UNIT_KEYS.reduce((map, key) => {
+  const beats = COUNTERS[key];
+  if (beats) map[beats] = key;
   return map;
-}, {} as Record<UnitKey, UnitKey>);
+}, {} as Partial<Record<UnitKey, UnitKey>>);
 
 export class EnemyAI {
   private grub = STARTING_GRUB;
@@ -53,8 +56,9 @@ export class EnemyAI {
       }
     }
 
-    if (Math.random() < this.stage.counterChance) {
-      return COUNTERED_BY[mostCommon];
+    const counterPick = COUNTERED_BY[mostCommon];
+    if (counterPick && Math.random() < this.stage.counterChance) {
+      return counterPick;
     }
 
     return UNIT_KEYS[Math.floor(Math.random() * UNIT_KEYS.length)];

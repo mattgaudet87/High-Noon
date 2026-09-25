@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { STAGES, REPLAY_BOUNTY_RATIO, DEFEAT_BOUNTY } from "@/game/config/stages";
+import { LEVELS, getLevelForStage } from "@/game/config/levels";
 import { loadLocal, saveLocal } from "@/lib/save/local";
 import { pushCloudSave } from "@/lib/save/cloud";
 
@@ -43,6 +44,16 @@ export class ResultsScene extends Phaser.Scene {
       bounty = DEFEAT_BOUNTY;
     }
 
+    const level = getLevelForStage(this.stageId);
+    const isLastStageOfLevel =
+      !!level && level.stageIds[level.stageIds.length - 1] === this.stageId;
+    const clearedLevel = this.victory && unlockedNext && isLastStageOfLevel;
+    const nextLevel = level ? LEVELS.find((l) => l.id === level.id + 1) : undefined;
+
+    if (clearedLevel && nextLevel) {
+      save.settings.seenLevelIntroIds = [...save.settings.seenLevelIntroIds, nextLevel.id];
+    }
+
     save.bounty += bounty;
     const stamped = saveLocal(save);
     pushCloudSave(stamped);
@@ -74,8 +85,29 @@ export class ResultsScene extends Phaser.Scene {
         .setOrigin(0.5);
     }
 
-    this.createButton(GAME_WIDTH / 2 - 130, GAME_HEIGHT / 2 + 80, "Back to map", () => {
-      this.scene.start("StageSelectScene");
+    const backLabel = clearedLevel ? "Continue" : "Back to map";
+    this.createButton(GAME_WIDTH / 2 - 130, GAME_HEIGHT / 2 + 80, backLabel, () => {
+      if (clearedLevel && level) {
+        this.scene.start("StoryScene", {
+          title: `${level.name} — Complete`,
+          body: level.outro,
+          buttonLabel: nextLevel ? "Continue" : "Ride home",
+          next: nextLevel
+            ? {
+                scene: "StoryScene",
+                data: {
+                  title: nextLevel.name,
+                  body: nextLevel.intro,
+                  buttonLabel: "Ride out",
+                  next: { scene: "LevelSelectScene" },
+                },
+              }
+            : { scene: "LevelSelectScene" },
+        });
+        return;
+      }
+
+      this.scene.start("StageSelectScene", { levelId: level?.id ?? 1 });
     });
 
     this.createButton(GAME_WIDTH / 2 + 130, GAME_HEIGHT / 2 + 80, "Try again", () => {

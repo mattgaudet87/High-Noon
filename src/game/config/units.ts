@@ -1,4 +1,23 @@
-export type UnitKey = "brawler" | "gunslinger" | "rider" | "shotgunner" | "sharpshooter";
+export type UnitKey =
+  | "brawler"
+  | "gunslinger"
+  | "rider"
+  | "shotgunner"
+  | "sharpshooter"
+  | "doc"
+  | "powderman";
+
+// The five troops above take part in the counter cycle. Doc and Powder Man
+// are support troops: they never counter and are never countered, so they
+// sit outside that cycle entirely (see COUNTERS below).
+export type CombatUnitKey =
+  | "brawler"
+  | "gunslinger"
+  | "rider"
+  | "shotgunner"
+  | "sharpshooter";
+
+export type UnitBehavior = "attack" | "heal" | "splash";
 
 export interface UnitStats {
   name: string;
@@ -8,6 +27,11 @@ export interface UnitStats {
   range: number;
   speed: number;
   attackCooldown: number;
+  // Defaults to "attack" (fight the nearest enemy) when omitted.
+  behavior?: UnitBehavior;
+  // Only used by "splash" behavior: extra radius around the primary target
+  // that also takes damage.
+  splashRadius?: number;
 }
 
 export const UNITS: Record<UnitKey, UnitStats> = {
@@ -56,13 +80,36 @@ export const UNITS: Record<UnitKey, UnitStats> = {
     speed: 24,
     attackCooldown: 1.3,
   },
+  doc: {
+    name: "Doc",
+    cost: 35,
+    hp: 45,
+    damage: 9,
+    range: 70,
+    speed: 28,
+    attackCooldown: 1.0,
+    behavior: "heal",
+  },
+  powderman: {
+    name: "Powder Man",
+    cost: 35,
+    hp: 50,
+    damage: 10,
+    range: 22,
+    speed: 30,
+    attackCooldown: 0.9,
+    behavior: "splash",
+    splashRadius: 40,
+  },
 };
 
-// Each unit beats the one it points to and takes double damage from it in
-// return. This is a five-way cycle: Brawler beats Gunslinger, Gunslinger
-// beats Rider, Rider beats Shotgunner, Shotgunner beats Sharpshooter, and
-// Sharpshooter beats Brawler.
-export const COUNTERS: Record<UnitKey, UnitKey> = {
+// Each combat unit beats the one it points to and takes double damage from
+// it in return. This is a five-way cycle: Brawler beats Gunslinger,
+// Gunslinger beats Rider, Rider beats Shotgunner, Shotgunner beats
+// Sharpshooter, and Sharpshooter beats Brawler. Doc and Powder Man are
+// support troops and have no entry here, so they never counter or get
+// countered.
+export const COUNTERS: Partial<Record<UnitKey, UnitKey>> = {
   brawler: "gunslinger",
   gunslinger: "rider",
   rider: "shotgunner",

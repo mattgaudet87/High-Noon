@@ -21,7 +21,7 @@ export class BootScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     syncOnLoad().finally(() => {
-      this.scene.start("StageSelectScene");
+      this.scene.start("LevelSelectScene");
     });
   }
 }

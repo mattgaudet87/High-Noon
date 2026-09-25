@@ -1,6 +1,8 @@
 import Phaser from "phaser";
 import { STAGES } from "@/game/config/stages";
-import { loadLocal } from "@/lib/save/local";
+import { LEVELS } from "@/game/config/levels";
+import { loadLocal, saveLocal } from "@/lib/save/local";
+import { pushCloudSave } from "@/lib/save/cloud";
 
 const GAME_WIDTH = 1280;
 const GAME_HEIGHT = 720;
@@ -22,17 +24,49 @@ function buildMarkerPositions(count: number): { x: number; y: number }[] {
 }
 
 export class StageSelectScene extends Phaser.Scene {
+  private levelId = 1;
+  private skipIntro = false;
+
   constructor() {
     super("StageSelectScene");
   }
 
-  create() {
-    this.cameras.main.setBackgroundColor(0xf2a65a);
+  init(data: { levelId?: number; skipIntro?: boolean }) {
+    this.levelId = data.levelId ?? 1;
+    this.skipIntro = data.skipIntro ?? false;
+  }
 
+  create() {
+    const level = LEVELS.find((l) => l.id === this.levelId) ?? LEVELS[0];
     const save = loadLocal();
 
+    const alreadySeen = save.settings.seenLevelIntroIds.includes(level.id);
+    const levelStarted = save.highestStage > level.stageIds[0];
+
+    if (!this.skipIntro && !alreadySeen && !levelStarted) {
+      const updated = {
+        ...save,
+        settings: {
+          ...save.settings,
+          seenLevelIntroIds: [...save.settings.seenLevelIntroIds, level.id],
+        },
+      };
+      const stamped = saveLocal(updated);
+      pushCloudSave(stamped);
+
+      this.scene.start("StoryScene", {
+        title: level.name,
+        body: level.intro,
+        buttonLabel: "Ride out",
+        next: { scene: "StageSelectScene", data: { levelId: level.id, skipIntro: true } },
+      });
+      return;
+    }
+
+    this.cameras.main.setBackgroundColor(0xf2a65a);
+
     this.add
-      .text(GAME_WIDTH / 2, 40, "The Trail", {
+      .text(GAME_WIDTH / 2, 40, level.name, {
         fontFamily: "monospace",
         fontSize: "32px",
         color: "#2b1b0e",
@@ -49,39 +83,40 @@ export class StageSelectScene extends Phaser.Scene {
       })
       .setOrigin(1, 0);
 
-    const markerPositions = buildMarkerPositions(STAGES.length);
+    const levelStages = STAGES.filter((s) => level.stageIds.includes(s.id));
+    const markerPositions = buildMarkerPositions(levelStages.length);
 
     this.drawTrail(markerPositions);
 
-    STAGES.forEach((stage, i) => {
+    levelStages.forEach((stage, i) => {
       const pos = markerPositions[i];
       const unlocked = stage.id <= save.highestStage;
       this.createStageMarker(pos.x, pos.y, stage.id, stage.name, unlocked);
     });
 
-    this.createStoreButton();
+    this.createBackButton();
   }
 
-  private createStoreButton() {
-    const x = 130;
-    const y = 660;
+  private createBackButton() {
+    const x = 110;
+    const y = 30;
 
     const background = this.add
-      .rectangle(x, y, 200, 56, 0x2b1b0e, 0.85)
+      .rectangle(x, y, 160, 44, 0x2b1b0e, 0.85)
       .setStrokeStyle(2, 0xeadbc4)
       .setInteractive({ useHandCursor: true });
 
     this.add
-      .text(x, y, "General Store", {
+      .text(x, y, "< Levels", {
         fontFamily: "monospace",
-        fontSize: "18px",
+        fontSize: "16px",
         color: "#eadbc4",
         fontStyle: "bold",
       })
       .setOrigin(0.5);
 
     background.on("pointerdown", () => {
-      this.scene.start("ShopScene");
+      this.scene.start("LevelSelectScene");
     });
   }
 
