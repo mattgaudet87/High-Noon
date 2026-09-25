@@ -5,6 +5,8 @@ import { drawHideout } from "@/game/art/hideout";
 import { drawBrawler } from "@/game/art/brawler";
 import { drawGunslinger } from "@/game/art/gunslinger";
 import { drawRider } from "@/game/art/rider";
+import { drawShotgunner } from "@/game/art/shotgunner";
+import { drawSharpshooter } from "@/game/art/sharpshooter";
 import { UNITS, UnitKey, COUNTERS, COUNTER_MULTIPLIER } from "@/game/config/units";
 import { STARTING_GRUB, GRUB_PER_SECOND, DYNAMITE } from "@/game/config/economy";
 import { STAGES, Stage } from "@/game/config/stages";
@@ -41,7 +43,7 @@ function getFormationRole(range: number): FormationRole {
 const LANES_PER_ROLE: Record<FormationRole, number> = {
   close: 3,
   medium: 2,
-  long: 2,
+  long: 3,
 };
 
 const LANE_SPACING_Y = 26;
@@ -64,6 +66,8 @@ const DRAW_FUNCS: Record<
   brawler: drawBrawler,
   gunslinger: drawGunslinger,
   rider: drawRider,
+  shotgunner: drawShotgunner,
+  sharpshooter: drawSharpshooter,
 };
 
 const UNIT_KEYS = Object.keys(UNITS) as UnitKey[];
@@ -214,14 +218,19 @@ export class BattleScene extends Phaser.Scene {
       .setOrigin(0.5, 0);
 
     const buttonY = GAME_HEIGHT - 55;
-    const positions = [GAME_WIDTH / 2 - 260, GAME_WIDTH / 2, GAME_WIDTH / 2 + 260];
+    const buttonWidth = 200;
+    const margin = 20;
+    const usableWidth = GAME_WIDTH - margin * 2;
+    const spacing =
+      UNIT_KEYS.length > 1 ? (usableWidth - buttonWidth) / (UNIT_KEYS.length - 1) : 0;
+    const positions = UNIT_KEYS.map((_, i) => margin + buttonWidth / 2 + spacing * i);
 
     UNIT_KEYS.forEach((key, i) => {
       const stats = UNITS[key];
       const x = positions[i];
 
       const background = this.add
-        .rectangle(x, buttonY, 220, 100, 0x2b1b0e, 0.85)
+        .rectangle(x, buttonY, buttonWidth, 100, 0x2b1b0e, 0.85)
         .setStrokeStyle(2, 0xeadbc4)
         .setInteractive({ useHandCursor: true });
 

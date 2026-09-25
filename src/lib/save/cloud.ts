@@ -1,5 +1,5 @@
 import { SaveData } from "./types";
-import { loadLocal, overwriteLocal } from "./local";
+import { loadLocal, normalizeSave, overwriteLocal } from "./local";
 
 const PIN = process.env.NEXT_PUBLIC_SAVE_PIN ?? "";
 const PULL_TIMEOUT_MS = 4000;
@@ -32,7 +32,7 @@ export async function syncOnLoad(): Promise<SaveData> {
     }
 
     if (cloud.updatedAt > local.updatedAt) {
-      return overwriteLocal(cloud);
+      return overwriteLocal(normalizeSave(cloud));
     }
 
     if (local.updatedAt > cloud.updatedAt) {

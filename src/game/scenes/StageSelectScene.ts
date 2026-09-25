@@ -5,15 +5,21 @@ import { loadLocal } from "@/lib/save/local";
 const GAME_WIDTH = 1280;
 const GAME_HEIGHT = 720;
 
-const MARKER_POSITIONS = [
-  { x: 110, y: 560 },
-  { x: 290, y: 360 },
-  { x: 470, y: 560 },
-  { x: 650, y: 360 },
-  { x: 830, y: 560 },
-  { x: 1000, y: 360 },
-  { x: 1170, y: 560 },
-];
+const TRAIL_MARGIN_X = 110;
+const TRAIL_LOW_Y = 560;
+const TRAIL_HIGH_Y = 360;
+
+// Lays the stage markers out in a zigzag trail spanning the screen, however
+// many stages there are, so adding more stages never needs new coordinates.
+function buildMarkerPositions(count: number): { x: number; y: number }[] {
+  if (count === 1) return [{ x: GAME_WIDTH / 2, y: TRAIL_LOW_Y }];
+
+  const step = (GAME_WIDTH - TRAIL_MARGIN_X * 2) / (count - 1);
+  return Array.from({ length: count }, (_, i) => ({
+    x: TRAIL_MARGIN_X + step * i,
+    y: i % 2 === 0 ? TRAIL_LOW_Y : TRAIL_HIGH_Y,
+  }));
+}
 
 export class StageSelectScene extends Phaser.Scene {
   constructor() {
@@ -43,10 +49,12 @@ export class StageSelectScene extends Phaser.Scene {
       })
       .setOrigin(1, 0);
 
-    this.drawTrail();
+    const markerPositions = buildMarkerPositions(STAGES.length);
+
+    this.drawTrail(markerPositions);
 
     STAGES.forEach((stage, i) => {
-      const pos = MARKER_POSITIONS[i];
+      const pos = markerPositions[i];
       const unlocked = stage.id <= save.highestStage;
       this.createStageMarker(pos.x, pos.y, stage.id, stage.name, unlocked);
     });
@@ -77,13 +85,13 @@ export class StageSelectScene extends Phaser.Scene {
     });
   }
 
-  private drawTrail() {
+  private drawTrail(markerPositions: { x: number; y: number }[]) {
     const graphics = this.add.graphics();
     graphics.fillStyle(0xb9773a, 1);
 
-    for (let i = 0; i < MARKER_POSITIONS.length - 1; i++) {
-      const a = MARKER_POSITIONS[i];
-      const b = MARKER_POSITIONS[i + 1];
+    for (let i = 0; i < markerPositions.length - 1; i++) {
+      const a = markerPositions[i];
+      const b = markerPositions[i + 1];
       const dx = b.x - a.x;
       const dy = b.y - a.y;
       const length = Math.hypot(dx, dy);

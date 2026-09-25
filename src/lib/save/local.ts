@@ -1,14 +1,15 @@
+import { UNITS, UnitKey } from "@/game/config/units";
 import { SaveData } from "./types";
 
 const SAVE_KEY = "hn_save";
+const UNIT_KEYS = Object.keys(UNITS) as UnitKey[];
 
 export const DEFAULT_SAVE: SaveData = {
   bounty: 0,
-  unitLevels: {
-    brawler: 1,
-    gunslinger: 1,
-    rider: 1,
-  },
+  unitLevels: UNIT_KEYS.reduce((levels, key) => {
+    levels[key] = 1;
+    return levels;
+  }, {} as Record<UnitKey, number>),
   highestStage: 1,
   settings: {
     sound: true,
@@ -16,11 +17,29 @@ export const DEFAULT_SAVE: SaveData = {
   updatedAt: 0,
 };
 
+// Fills in level 1 for any troop type a save doesn't know about yet, so an
+// old save made before a new troop type existed still loads cleanly.
+function normalizeUnitLevels(levels: Partial<Record<UnitKey, number>> | undefined) {
+  const result = {} as Record<UnitKey, number>;
+  for (const key of UNIT_KEYS) {
+    result[key] = levels?.[key] ?? 1;
+  }
+  return result;
+}
+
+export function normalizeSave(data: Partial<SaveData>): SaveData {
+  return {
+    ...DEFAULT_SAVE,
+    ...data,
+    unitLevels: normalizeUnitLevels(data.unitLevels),
+  };
+}
+
 export function loadLocal(): SaveData {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return DEFAULT_SAVE;
-    return { ...DEFAULT_SAVE, ...JSON.parse(raw) } as SaveData;
+    return normalizeSave(JSON.parse(raw));
   } catch {
     return DEFAULT_SAVE;
   }

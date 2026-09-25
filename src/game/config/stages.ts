@@ -80,6 +80,36 @@ export const STAGES: Stage[] = [
     jailhouseHp: 500,
     firstClearBounty: 120,
   },
+  {
+    id: 8,
+    name: "Vulture Ridge",
+    enemyGrubMultiplier: 1.5,
+    counterChance: 0.85,
+    enemyLevel: 4,
+    hideoutHp: 1050,
+    jailhouseHp: 450,
+    firstClearBounty: 150,
+  },
+  {
+    id: 9,
+    name: "Iron Horse Depot",
+    enemyGrubMultiplier: 1.65,
+    counterChance: 0.9,
+    enemyLevel: 5,
+    hideoutHp: 1200,
+    jailhouseHp: 450,
+    firstClearBounty: 190,
+  },
+  {
+    id: 10,
+    name: "Sundown Standoff",
+    enemyGrubMultiplier: 1.8,
+    counterChance: 0.95,
+    enemyLevel: 5,
+    hideoutHp: 1400,
+    jailhouseHp: 400,
+    firstClearBounty: 240,
+  },
 ];
 
 export const REPLAY_BOUNTY_RATIO = 0.5;

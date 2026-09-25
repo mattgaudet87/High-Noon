@@ -4,6 +4,8 @@ import { MAX_LEVEL, UPGRADE_COSTS, getUnitStats } from "@/game/config/upgrades";
 import { drawBrawler } from "@/game/art/brawler";
 import { drawGunslinger } from "@/game/art/gunslinger";
 import { drawRider } from "@/game/art/rider";
+import { drawShotgunner } from "@/game/art/shotgunner";
+import { drawSharpshooter } from "@/game/art/sharpshooter";
 import { loadLocal, saveLocal } from "@/lib/save/local";
 import { pushCloudSave } from "@/lib/save/cloud";
 import { SaveData } from "@/lib/save/types";
@@ -27,12 +29,37 @@ const DRAW_FUNCS: Record<
   brawler: drawBrawler,
   gunslinger: drawGunslinger,
   rider: drawRider,
+  shotgunner: drawShotgunner,
+  sharpshooter: drawSharpshooter,
 };
 
+// Cards flow into rows of up to 3, so the shop keeps working however many
+// troop types the game has.
+const CARDS_PER_ROW = 3;
 const CARD_WIDTH = 340;
-const CARD_HEIGHT = 460;
-const CARD_Y = 260;
-const CARD_POSITIONS = [GAME_WIDTH / 2 - 380, GAME_WIDTH / 2, GAME_WIDTH / 2 + 380];
+const CARD_HEIGHT = 240;
+const CARD_ROW_START_Y = 200;
+const CARD_ROW_GAP = 280;
+
+function buildCardPositions(count: number): { x: number; y: number }[] {
+  const rows = Math.ceil(count / CARDS_PER_ROW);
+  const positions: { x: number; y: number }[] = [];
+
+  for (let row = 0; row < rows; row++) {
+    const rowCount = Math.min(CARDS_PER_ROW, count - row * CARDS_PER_ROW);
+    const rowWidth = rowCount * CARD_WIDTH + (rowCount - 1) * 40;
+    const startX = GAME_WIDTH / 2 - rowWidth / 2 + CARD_WIDTH / 2;
+
+    for (let col = 0; col < rowCount; col++) {
+      positions.push({
+        x: startX + col * (CARD_WIDTH + 40),
+        y: CARD_ROW_START_Y + row * CARD_ROW_GAP,
+      });
+    }
+  }
+
+  return positions;
+}
 
 export class ShopScene extends Phaser.Scene {
   private save!: SaveData;
@@ -76,8 +103,9 @@ export class ShopScene extends Phaser.Scene {
       })
       .setOrigin(1, 0);
 
+    const cardPositions = buildCardPositions(UNIT_KEYS.length);
     UNIT_KEYS.forEach((key, i) => {
-      this.createUnitCard(key, CARD_POSITIONS[i], CARD_Y);
+      this.createUnitCard(key, cardPositions[i].x, cardPositions[i].y);
     });
 
     this.createButton(GAME_WIDTH / 2, GAME_HEIGHT - 50, "Back to map", () => {
@@ -95,39 +123,39 @@ export class ShopScene extends Phaser.Scene {
       .setStrokeStyle(3, 0xeadbc4);
 
     this.add
-      .text(x, y - CARD_HEIGHT / 2 + 24, stats.name, {
+      .text(x, y - CARD_HEIGHT / 2 + 20, stats.name, {
         fontFamily: "monospace",
-        fontSize: "24px",
+        fontSize: "22px",
         color: "#eadbc4",
         fontStyle: "bold",
       })
       .setOrigin(0.5);
 
     const art = this.add.graphics();
-    art.setPosition(x, y - 60);
+    art.setPosition(x, y - 20);
 
-    const levelText = this.add.text(x, y + 10, "", {
+    const levelText = this.add.text(x, y + 28, "", {
       fontFamily: "monospace",
-      fontSize: "18px",
+      fontSize: "16px",
       color: "#f5d76e",
       fontStyle: "bold",
     }).setOrigin(0.5);
 
-    const statsText = this.add.text(x, y + 60, "", {
+    const statsText = this.add.text(x, y + 52, "", {
       fontFamily: "monospace",
-      fontSize: "16px",
+      fontSize: "13px",
       color: "#eadbc4",
       align: "center",
     }).setOrigin(0.5);
 
     const buttonBg = this.add
-      .rectangle(x, y + CARD_HEIGHT / 2 - 50, 240, 56, 0xeadbc4, 1)
+      .rectangle(x, y + CARD_HEIGHT / 2 - 28, 190, 36, 0xeadbc4, 1)
       .setInteractive({ useHandCursor: true });
 
     const buttonText = this.add
-      .text(x, y + CARD_HEIGHT / 2 - 50, "", {
+      .text(x, y + CARD_HEIGHT / 2 - 28, "", {
         fontFamily: "monospace",
-        fontSize: "18px",
+        fontSize: "15px",
         color: "#2b1b0e",
         fontStyle: "bold",
       })

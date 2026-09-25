@@ -28,13 +28,19 @@ Owner: Matt (not a developer). Explain every change in plain language.
 - `src/app/api/save/route.ts` GET and PUT the cloud save
 
 ## Game rules (source of truth)
-- Units: Brawler (melee), Gunslinger (ranged), Rider (fast, horseback)
-- Counters deal 2x damage: Brawler > Gunslinger > Rider > Brawler
+- Units: Brawler (melee), Gunslinger (ranged), Rider (fast, horseback, melee),
+  Shotgunner (medium range), Sharpshooter (long range, glass cannon)
+- Counters deal 2x damage in a five-way cycle: Brawler > Gunslinger > Rider >
+  Shotgunner > Sharpshooter > Brawler
+- Fighters form up in lanes by how they fight (close/medium/long range) so they
+  cluster instead of walking in one strict single-file line
 - Grub = in-battle resource, ticks up automatically, resets every battle
 - Bounty = permanent currency, earned from battles, spent in the General Store
 - Unit levels 1 to 5. Lv3 adds duster coat + tin badge. Lv5 adds gold star + silver weapon
 - Power: Dynamite. Player swipes across the street, blasts hit outlaws along the swipe
 - Player base = Jailhouse (left). Enemy base = Hideout (right)
+- 10 stages on the trail, from easiest (Tumbleweed Flats) to hardest (Sundown Standoff)
+- Battle screen has a pause button (top right) that freezes the fight, grub, and cooldowns
 - Grounded Western tone: no magic, no fantasy creatures
 
 ## Art rules
