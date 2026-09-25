@@ -6,9 +6,11 @@ import { drawBrawler } from "@/game/art/brawler";
 import { drawGunslinger } from "@/game/art/gunslinger";
 import { drawRider } from "@/game/art/rider";
 import { UNITS, UnitKey, COUNTERS, COUNTER_MULTIPLIER } from "@/game/config/units";
-import { STARTING_GRUB, GRUB_PER_SECOND } from "@/game/config/economy";
+import { STARTING_GRUB, GRUB_PER_SECOND, DYNAMITE } from "@/game/config/economy";
 import { STAGES, Stage } from "@/game/config/stages";
 import { getUnitStats } from "@/game/config/upgrades";
+import { EnemyAI } from "@/game/ai/enemyAI";
+import { loadLocal } from "@/lib/save/local";
 
 const GAME_WIDTH = 1280;
 const GAME_HEIGHT = 720;
@@ -24,7 +26,10 @@ const BUILDING_BASE_Y = 420;
 
 const UNIT_SPAWN_OFFSET = 90;
 const UNIT_SPACING = 34;
-const ENEMY_SPAWN_INTERVAL_MS = 3000;
+
+const SWIPE_ZONE_BOTTOM = 600;
+const BLAST_TOP_Y = 380;
+const BLAST_BOTTOM_Y = 620;
 
 const DRAW_FUNCS: Record<
   UnitKey,
@@ -79,8 +84,15 @@ export class BattleScene extends Phaser.Scene {
   private jailhouseBar!: Phaser.GameObjects.Graphics;
   private hideoutBar!: Phaser.GameObjects.Graphics;
 
-  private enemySpawnEvent?: Phaser.Time.TimerEvent;
+  private enemyAI!: EnemyAI;
   private battleOver = false;
+  private unitLevels!: Record<UnitKey, number>;
+
+  private dynamiteCooldownRemaining = 0;
+  private dynamiteText!: Phaser.GameObjects.Text;
+  private swipeGraphics!: Phaser.GameObjects.Graphics;
+  private blastGraphics!: Phaser.GameObjects.Graphics;
+  private swipeStartX: number | null = null;
 
   constructor() {
     super("BattleScene");
@@ -95,6 +107,10 @@ export class BattleScene extends Phaser.Scene {
     this.jailhouseHp = this.stage.jailhouseHp;
     this.hideoutHp = this.stage.hideoutHp;
     this.battleOver = false;
+    this.enemyAI = new EnemyAI(this.stage);
+    this.unitLevels = loadLocal().unitLevels;
+    this.dynamiteCooldownRemaining = 0;
+    this.swipeStartX = null;
   }
 
   create() {
@@ -110,11 +126,9 @@ export class BattleScene extends Phaser.Scene {
 
     this.createHud();
 
-    this.enemySpawnEvent = this.time.addEvent({
-      delay: ENEMY_SPAWN_INTERVAL_MS,
-      loop: true,
-      callback: () => this.spawnEnemy(),
-    });
+    this.swipeGraphics = this.add.graphics();
+    this.blastGraphics = this.add.graphics();
+    this.setupDynamiteInput();
   }
 
   update(_time: number, delta: number) {
@@ -126,7 +140,20 @@ export class BattleScene extends Phaser.Scene {
     this.grubText.setText(`Grub: ${Math.floor(this.grub)}`);
     this.updateDeployButtons();
 
+    if (this.dynamiteCooldownRemaining > 0) {
+      this.dynamiteCooldownRemaining = Math.max(0, this.dynamiteCooldownRemaining - dt);
+    }
+    this.updateDynamiteHud();
+
     this.updateUnits(dt);
+
+    const lawmenOnField = this.units
+      .filter((u) => u.team === "lawman")
+      .map((u) => u.key);
+    this.enemyAI.update(dt, lawmenOnField, (key) =>
+      this.spawnUnit(key, "outlaw", this.stage.enemyLevel)
+    );
+
     this.drawBuildingBars();
     this.checkBattleEnd();
   }
@@ -138,6 +165,13 @@ export class BattleScene extends Phaser.Scene {
       fontFamily: "monospace",
       fontSize: "26px",
       color: "#2b1b0e",
+      fontStyle: "bold",
+    });
+
+    this.dynamiteText = this.add.text(20, 56, "", {
+      fontFamily: "monospace",
+      fontSize: "18px",
+      color: "#7a1f1f",
       fontStyle: "bold",
     });
 
@@ -218,19 +252,92 @@ export class BattleScene extends Phaser.Scene {
     graphics.fillRect(centerX - width / 2, y, width * clamped, 10);
   }
 
+  // ---------- Dynamite ----------
+
+  private setupDynamiteInput() {
+    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      if (pointer.y > SWIPE_ZONE_BOTTOM) return;
+      this.swipeStartX = pointer.x;
+    });
+
+    this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
+      if (this.swipeStartX === null) return;
+      this.drawSwipeTrail(this.swipeStartX, pointer.x);
+    });
+
+    this.input.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+      if (this.swipeStartX === null) return;
+      this.triggerDynamite(this.swipeStartX, pointer.x);
+      this.swipeStartX = null;
+      this.swipeGraphics.clear();
+    });
+  }
+
+  private drawSwipeTrail(x1: number, x2: number) {
+    this.swipeGraphics.clear();
+    const ready = this.dynamiteCooldownRemaining <= 0;
+    this.swipeGraphics.lineStyle(4, ready ? 0xf5d76e : 0x8a8a8a, 0.8);
+    this.swipeGraphics.beginPath();
+    this.swipeGraphics.moveTo(x1, GROUND_Y - 40);
+    this.swipeGraphics.lineTo(x2, GROUND_Y - 40);
+    this.swipeGraphics.strokePath();
+  }
+
+  private triggerDynamite(x1: number, x2: number) {
+    if (this.dynamiteCooldownRemaining > 0) return;
+
+    const dragDistance = Math.abs(x2 - x1);
+    const width = Phaser.Math.Clamp(dragDistance, DYNAMITE.minWidth, DYNAMITE.maxWidth);
+    const centerX = (x1 + x2) / 2;
+    const blastMinX = centerX - width / 2;
+    const blastMaxX = centerX + width / 2;
+
+    for (const unit of this.units) {
+      if (unit.team !== "outlaw") continue;
+      if (unit.container.x >= blastMinX && unit.container.x <= blastMaxX) {
+        unit.hp = Math.max(0, unit.hp - DYNAMITE.damage);
+        this.drawUnitHealthBar(unit);
+      }
+    }
+    this.removeDeadUnits();
+
+    this.dynamiteCooldownRemaining = DYNAMITE.cooldownSeconds;
+    this.showBlastEffect(blastMinX, blastMaxX);
+  }
+
+  private showBlastEffect(minX: number, maxX: number) {
+    this.blastGraphics.clear();
+    this.blastGraphics.fillStyle(0xf5d76e, 0.55);
+    this.blastGraphics.fillRect(minX, BLAST_TOP_Y, maxX - minX, BLAST_BOTTOM_Y - BLAST_TOP_Y);
+
+    this.tweens.add({
+      targets: this.blastGraphics,
+      alpha: 0,
+      duration: 350,
+      onComplete: () => {
+        this.blastGraphics.clear();
+        this.blastGraphics.setAlpha(1);
+      },
+    });
+  }
+
+  private updateDynamiteHud() {
+    if (this.dynamiteCooldownRemaining <= 0) {
+      this.dynamiteText.setText("Dynamite: Ready (swipe the street)");
+      this.dynamiteText.setColor("#4caf50");
+    } else {
+      this.dynamiteText.setText(`Dynamite: ${Math.ceil(this.dynamiteCooldownRemaining)}s`);
+      this.dynamiteText.setColor("#7a1f1f");
+    }
+  }
+
   // ---------- Units ----------
 
   private deployUnit(key: UnitKey) {
     const cost = UNITS[key].cost;
     if (this.grub < cost) return;
     this.grub -= cost;
-    this.spawnUnit(key, "lawman", 1);
-  }
-
-  private spawnEnemy() {
-    if (this.battleOver) return;
-    const key = UNIT_KEYS[Phaser.Math.Between(0, UNIT_KEYS.length - 1)];
-    this.spawnUnit(key, "outlaw", 1);
+    this.spawnUnit(key, "lawman", this.unitLevels[key]);
   }
 
   private spawnUnit(key: UnitKey, team: "lawman" | "outlaw", level: number) {
@@ -371,34 +478,6 @@ export class BattleScene extends Phaser.Scene {
 
   private endBattle(victory: boolean) {
     this.battleOver = true;
-    this.enemySpawnEvent?.remove();
-
-    this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.55).setOrigin(0, 0);
-
-    this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, victory ? "Victory" : "Defeat", {
-        fontFamily: "monospace",
-        fontSize: "64px",
-        color: victory ? "#f5d76e" : "#e05252",
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5);
-
-    const replayButton = this.add
-      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40, 220, 60, 0xeadbc4, 1)
-      .setInteractive({ useHandCursor: true });
-
-    this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40, "Play again", {
-        fontFamily: "monospace",
-        fontSize: "22px",
-        color: "#2b1b0e",
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5);
-
-    replayButton.on("pointerdown", () => {
-      this.scene.restart({ stageId: this.stageId });
-    });
+    this.scene.start("ResultsScene", { stageId: this.stageId, victory });
   }
 }

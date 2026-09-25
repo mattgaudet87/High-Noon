@@ -28,10 +28,16 @@ export function loadLocal(): SaveData {
 
 export function saveLocal(data: SaveData): SaveData {
   const stamped = { ...data, updatedAt: Date.now() };
+  return overwriteLocal(stamped);
+}
+
+// Writes save data as-is, without touching updatedAt. Used when merging in a
+// cloud save that already carries the correct timestamp.
+export function overwriteLocal(data: SaveData): SaveData {
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(stamped));
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
   } catch {
     // localStorage unavailable (private mode, blocked, etc). Game keeps running in memory.
   }
-  return stamped;
+  return data;
 }

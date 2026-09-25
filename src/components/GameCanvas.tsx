@@ -4,6 +4,9 @@ import { useEffect, useRef } from "react";
 import Phaser from "phaser";
 import { BootScene } from "@/game/scenes/BootScene";
 import { BattleScene } from "@/game/scenes/BattleScene";
+import { StageSelectScene } from "@/game/scenes/StageSelectScene";
+import { ResultsScene } from "@/game/scenes/ResultsScene";
+import { ShopScene } from "@/game/scenes/ShopScene";
 
 export default function GameCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -22,7 +25,7 @@ export default function GameCanvas() {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
       },
-      scene: [BootScene, BattleScene],
+      scene: [BootScene, StageSelectScene, BattleScene, ResultsScene, ShopScene],
     });
 
     return () => {
