@@ -324,11 +324,31 @@ export class BattleScene extends Phaser.Scene {
 
     resumeBackground.on("pointerdown", () => this.togglePause());
 
+    const leaveBackground = this.add
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 115, 220, 60, 0x7a1f1f, 1)
+      .setStrokeStyle(2, 0xeadbc4)
+      .setInteractive({ useHandCursor: true });
+
+    const leaveLabel = this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 115, "Leave game", {
+        fontFamily: "monospace",
+        fontSize: "22px",
+        color: "#eadbc4",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5);
+
+    leaveBackground.on("pointerdown", () => {
+      this.scene.start("StageSelectScene");
+    });
+
     this.pauseOverlay = this.add.container(0, 0, [
       overlayBg,
       pausedText,
       resumeBackground,
       resumeLabel,
+      leaveBackground,
+      leaveLabel,
     ]);
     this.pauseOverlay.setVisible(false);
     this.pauseOverlay.setDepth(1000);
