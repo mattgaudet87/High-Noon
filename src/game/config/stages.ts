@@ -12,6 +12,26 @@ export interface Stage {
 export const STAGES: Stage[] = [
   {
     id: 1,
+    name: "Tumbleweed Flats",
+    enemyGrubMultiplier: 0.6,
+    counterChance: 0.1,
+    enemyLevel: 1,
+    hideoutHp: 300,
+    jailhouseHp: 600,
+    firstClearBounty: 20,
+  },
+  {
+    id: 2,
+    name: "Quiet Crossing",
+    enemyGrubMultiplier: 0.75,
+    counterChance: 0.2,
+    enemyLevel: 1,
+    hideoutHp: 400,
+    jailhouseHp: 550,
+    firstClearBounty: 30,
+  },
+  {
+    id: 3,
     name: "Dusty Gulch",
     enemyGrubMultiplier: 0.9,
     counterChance: 0.3,
@@ -21,7 +41,7 @@ export const STAGES: Stage[] = [
     firstClearBounty: 40,
   },
   {
-    id: 2,
+    id: 4,
     name: "Rattlesnake Pass",
     enemyGrubMultiplier: 1.0,
     counterChance: 0.45,
@@ -31,7 +51,7 @@ export const STAGES: Stage[] = [
     firstClearBounty: 55,
   },
   {
-    id: 3,
+    id: 5,
     name: "Coyote Creek",
     enemyGrubMultiplier: 1.1,
     counterChance: 0.55,
@@ -41,7 +61,7 @@ export const STAGES: Stage[] = [
     firstClearBounty: 70,
   },
   {
-    id: 4,
+    id: 6,
     name: "Dead Man's Mesa",
     enemyGrubMultiplier: 1.2,
     counterChance: 0.7,
@@ -51,7 +71,7 @@ export const STAGES: Stage[] = [
     firstClearBounty: 90,
   },
   {
-    id: 5,
+    id: 7,
     name: "Black Hat Canyon",
     enemyGrubMultiplier: 1.35,
     counterChance: 0.8,

@@ -6,11 +6,13 @@ const GAME_WIDTH = 1280;
 const GAME_HEIGHT = 720;
 
 const MARKER_POSITIONS = [
-  { x: 150, y: 560 },
-  { x: 400, y: 360 },
-  { x: 650, y: 560 },
-  { x: 900, y: 360 },
-  { x: 1130, y: 560 },
+  { x: 110, y: 560 },
+  { x: 290, y: 360 },
+  { x: 470, y: 560 },
+  { x: 650, y: 360 },
+  { x: 830, y: 560 },
+  { x: 1000, y: 360 },
+  { x: 1170, y: 560 },
 ];
 
 export class StageSelectScene extends Phaser.Scene {

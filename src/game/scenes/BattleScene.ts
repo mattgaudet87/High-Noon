@@ -27,6 +27,25 @@ const BUILDING_BASE_Y = 420;
 const UNIT_SPAWN_OFFSET = 90;
 const UNIT_SPACING = 34;
 
+// Fighters pile up in lanes based on how they fight, instead of one strict
+// single-file line. Close-up fighters get more lanes since they crowd the
+// front; long-range fighters need fewer since they hang back and spread out.
+type FormationRole = "close" | "medium" | "long";
+
+function getFormationRole(range: number): FormationRole {
+  if (range <= 30) return "close";
+  if (range <= 70) return "medium";
+  return "long";
+}
+
+const LANES_PER_ROLE: Record<FormationRole, number> = {
+  close: 3,
+  medium: 2,
+  long: 2,
+};
+
+const LANE_SPACING_Y = 26;
+
 const SWIPE_ZONE_BOTTOM = 600;
 const BLAST_TOP_Y = 380;
 const BLAST_BOTTOM_Y = 620;
@@ -60,6 +79,8 @@ interface BattleUnit {
   attackCooldown: number;
   cooldownRemaining: number;
   facing: 1 | -1;
+  role: FormationRole;
+  lane: number;
   container: Phaser.GameObjects.Container;
   healthBar: Phaser.GameObjects.Graphics;
 }
@@ -78,6 +99,7 @@ export class BattleScene extends Phaser.Scene {
   private grub = STARTING_GRUB;
   private grubText!: Phaser.GameObjects.Text;
   private deployButtons: DeployButton[] = [];
+  private laneCounters: Record<string, number> = {};
 
   private jailhouseHp = 0;
   private hideoutHp = 0;
@@ -94,6 +116,10 @@ export class BattleScene extends Phaser.Scene {
   private blastGraphics!: Phaser.GameObjects.Graphics;
   private swipeStartX: number | null = null;
 
+  private paused = false;
+  private pauseButtonLabel!: Phaser.GameObjects.Text;
+  private pauseOverlay!: Phaser.GameObjects.Container;
+
   constructor() {
     super("BattleScene");
   }
@@ -104,6 +130,7 @@ export class BattleScene extends Phaser.Scene {
     this.units = [];
     this.grub = STARTING_GRUB;
     this.deployButtons = [];
+    this.laneCounters = {};
     this.jailhouseHp = this.stage.jailhouseHp;
     this.hideoutHp = this.stage.hideoutHp;
     this.battleOver = false;
@@ -111,6 +138,7 @@ export class BattleScene extends Phaser.Scene {
     this.unitLevels = loadLocal().unitLevels;
     this.dynamiteCooldownRemaining = 0;
     this.swipeStartX = null;
+    this.paused = false;
   }
 
   create() {
@@ -125,6 +153,7 @@ export class BattleScene extends Phaser.Scene {
     this.drawBuildingBars();
 
     this.createHud();
+    this.createPauseControls();
 
     this.swipeGraphics = this.add.graphics();
     this.blastGraphics = this.add.graphics();
@@ -132,7 +161,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number) {
-    if (this.battleOver) return;
+    if (this.battleOver || this.paused) return;
 
     const dt = delta / 1000;
 
@@ -184,7 +213,7 @@ export class BattleScene extends Phaser.Scene {
       })
       .setOrigin(0.5, 0);
 
-    const buttonY = GAME_HEIGHT - 60;
+    const buttonY = GAME_HEIGHT - 55;
     const positions = [GAME_WIDTH / 2 - 260, GAME_WIDTH / 2, GAME_WIDTH / 2 + 260];
 
     UNIT_KEYS.forEach((key, i) => {
@@ -192,15 +221,26 @@ export class BattleScene extends Phaser.Scene {
       const x = positions[i];
 
       const background = this.add
-        .rectangle(x, buttonY, 220, 70, 0x2b1b0e, 0.85)
+        .rectangle(x, buttonY, 220, 100, 0x2b1b0e, 0.85)
         .setStrokeStyle(2, 0xeadbc4)
         .setInteractive({ useHandCursor: true });
 
       const label = this.add
-        .text(x, buttonY, `${stats.name}\n${stats.cost} grub`, {
+        .text(x, buttonY - 27, `${stats.name}\n${stats.cost} grub`, {
           fontFamily: "monospace",
           fontSize: "18px",
           color: "#eadbc4",
+          align: "center",
+        })
+        .setOrigin(0.5);
+
+      const attackType = getFormationRole(stats.range) === "close" ? "Melee" : "Ranged";
+
+      this.add
+        .text(x, buttonY + 20, `HP ${stats.hp}\n${attackType}, ${stats.damage} dmg`, {
+          fontFamily: "monospace",
+          fontSize: "13px",
+          color: "#c9b89a",
           align: "center",
         })
         .setOrigin(0.5);
@@ -217,6 +257,83 @@ export class BattleScene extends Phaser.Scene {
       const alpha = canAfford ? 1 : 0.5;
       button.background.setAlpha(alpha);
       button.label.setAlpha(alpha);
+    }
+  }
+
+  // ---------- Pause ----------
+
+  private createPauseControls() {
+    const x = GAME_WIDTH - 44;
+    const y = 30;
+
+    const background = this.add
+      .rectangle(x, y, 56, 40, 0x2b1b0e, 0.85)
+      .setStrokeStyle(2, 0xeadbc4)
+      .setInteractive({ useHandCursor: true });
+
+    this.pauseButtonLabel = this.add
+      .text(x, y, "II", {
+        fontFamily: "monospace",
+        fontSize: "20px",
+        color: "#eadbc4",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5);
+
+    background.on("pointerdown", () => this.togglePause());
+
+    const overlayBg = this.add.rectangle(
+      GAME_WIDTH / 2,
+      GAME_HEIGHT / 2,
+      GAME_WIDTH,
+      GAME_HEIGHT,
+      0x000000,
+      0.55
+    );
+
+    const pausedText = this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40, "Paused", {
+        fontFamily: "monospace",
+        fontSize: "48px",
+        color: "#eadbc4",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5);
+
+    const resumeBackground = this.add
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40, 220, 60, 0xeadbc4, 1)
+      .setInteractive({ useHandCursor: true });
+
+    const resumeLabel = this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40, "Resume", {
+        fontFamily: "monospace",
+        fontSize: "22px",
+        color: "#2b1b0e",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5);
+
+    resumeBackground.on("pointerdown", () => this.togglePause());
+
+    this.pauseOverlay = this.add.container(0, 0, [
+      overlayBg,
+      pausedText,
+      resumeBackground,
+      resumeLabel,
+    ]);
+    this.pauseOverlay.setVisible(false);
+    this.pauseOverlay.setDepth(1000);
+  }
+
+  private togglePause() {
+    if (this.battleOver) return;
+    this.paused = !this.paused;
+    this.pauseOverlay.setVisible(this.paused);
+    this.pauseButtonLabel.setText(this.paused ? "▶" : "II");
+    if (this.paused) {
+      this.tweens.pauseAll();
+    } else {
+      this.tweens.resumeAll();
     }
   }
 
@@ -256,17 +373,18 @@ export class BattleScene extends Phaser.Scene {
 
   private setupDynamiteInput() {
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      if (this.paused || this.battleOver) return;
       if (pointer.y > SWIPE_ZONE_BOTTOM) return;
       this.swipeStartX = pointer.x;
     });
 
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
-      if (this.swipeStartX === null) return;
+      if (this.paused || this.swipeStartX === null) return;
       this.drawSwipeTrail(this.swipeStartX, pointer.x);
     });
 
     this.input.on("pointerup", (pointer: Phaser.Input.Pointer) => {
-      if (this.swipeStartX === null) return;
+      if (this.paused || this.swipeStartX === null) return;
       this.triggerDynamite(this.swipeStartX, pointer.x);
       this.swipeStartX = null;
       this.swipeGraphics.clear();
@@ -334,6 +452,7 @@ export class BattleScene extends Phaser.Scene {
   // ---------- Units ----------
 
   private deployUnit(key: UnitKey) {
+    if (this.paused || this.battleOver) return;
     const cost = UNITS[key].cost;
     if (this.grub < cost) return;
     this.grub -= cost;
@@ -351,7 +470,12 @@ export class BattleScene extends Phaser.Scene {
 
     const healthBar = this.add.graphics();
 
-    const container = this.add.container(spawnX, GROUND_Y, [art, healthBar]);
+    const role = getFormationRole(stats.range);
+    const lane = this.nextLane(team, role);
+    const laneCount = LANES_PER_ROLE[role];
+    const laneOffsetY = (lane - (laneCount - 1) / 2) * LANE_SPACING_Y;
+
+    const container = this.add.container(spawnX, GROUND_Y + laneOffsetY, [art, healthBar]);
 
     const unit: BattleUnit = {
       team,
@@ -364,12 +488,21 @@ export class BattleScene extends Phaser.Scene {
       attackCooldown: stats.attackCooldown,
       cooldownRemaining: 0,
       facing,
+      role,
+      lane,
       container,
       healthBar,
     };
 
     this.units.push(unit);
     this.drawUnitHealthBar(unit);
+  }
+
+  private nextLane(team: "lawman" | "outlaw", role: FormationRole): number {
+    const key = `${team}:${role}`;
+    const count = this.laneCounters[key] ?? 0;
+    this.laneCounters[key] = count + 1;
+    return count % LANES_PER_ROLE[role];
   }
 
   private drawUnitHealthBar(unit: BattleUnit) {
@@ -433,6 +566,7 @@ export class BattleScene extends Phaser.Scene {
   private isBlockedByTeammate(unit: BattleUnit): boolean {
     return this.units.some((other) => {
       if (other === unit || other.team !== unit.team) return false;
+      if (other.role !== unit.role || other.lane !== unit.lane) return false;
       const dx = other.container.x - unit.container.x;
       const sameDirection = Math.sign(dx) === unit.facing;
       return sameDirection && Math.abs(dx) < UNIT_SPACING;
