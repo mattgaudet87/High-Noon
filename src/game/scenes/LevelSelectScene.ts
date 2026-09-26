@@ -5,10 +5,34 @@ import { loadLocal } from "@/lib/save/local";
 const GAME_WIDTH = 1280;
 const GAME_HEIGHT = 720;
 
+// Cards flow into rows of up to 3, so the hub keeps working however many
+// levels the trail has.
+const CARDS_PER_ROW = 3;
 const CARD_WIDTH = 340;
-const CARD_HEIGHT = 320;
-const CARD_Y = 340;
-const CARD_GAP = 60;
+const CARD_HEIGHT = 230;
+const CARD_ROW_START_Y = 250;
+const CARD_ROW_GAP = 250;
+const CARD_GAP_X = 40;
+
+function buildCardPositions(count: number): { x: number; y: number }[] {
+  const rows = Math.ceil(count / CARDS_PER_ROW);
+  const positions: { x: number; y: number }[] = [];
+
+  for (let row = 0; row < rows; row++) {
+    const rowCount = Math.min(CARDS_PER_ROW, count - row * CARDS_PER_ROW);
+    const rowWidth = rowCount * CARD_WIDTH + (rowCount - 1) * CARD_GAP_X;
+    const startX = GAME_WIDTH / 2 - rowWidth / 2 + CARD_WIDTH / 2;
+
+    for (let col = 0; col < rowCount; col++) {
+      positions.push({
+        x: startX + col * (CARD_WIDTH + CARD_GAP_X),
+        y: CARD_ROW_START_Y + row * CARD_ROW_GAP,
+      });
+    }
+  }
+
+  return positions;
+}
 
 export class LevelSelectScene extends Phaser.Scene {
   constructor() {
@@ -46,14 +70,12 @@ export class LevelSelectScene extends Phaser.Scene {
       })
       .setOrigin(1, 0);
 
-    const totalWidth = LEVELS.length * CARD_WIDTH + (LEVELS.length - 1) * CARD_GAP;
-    const startX = GAME_WIDTH / 2 - totalWidth / 2 + CARD_WIDTH / 2;
+    const positions = buildCardPositions(LEVELS.length);
 
     LEVELS.forEach((level, i) => {
-      const x = startX + i * (CARD_WIDTH + CARD_GAP);
       const unlocked = save.highestStage >= level.stageIds[0];
       const cleared = save.highestStage > level.stageIds[level.stageIds.length - 1];
-      this.createLevelCard(x, CARD_Y, level, unlocked, cleared);
+      this.createLevelCard(positions[i].x, positions[i].y, level, unlocked, cleared);
     });
 
     this.createStoreButton();

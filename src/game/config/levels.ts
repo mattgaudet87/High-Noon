@@ -36,7 +36,25 @@ export const LEVELS: Level[] = [
     intro:
       "The Iron Horse Cartel has been hijacking the new railroad, selling the guns and the payroll both. If they finish arming their outfit, no town on the line will be safe. The Sheriff rides for the rail depot for one last stand.",
     outro:
-      "The depot is quiet. The Iron Horse Cartel is broken, the railroad is safe, and the frontier finally gets some peace. The Sheriff rides home.",
+      "The depot is quiet and the Iron Horse Cartel is broken. But the cartel's ledgers show every gun, every payoff, bought and paid for by a company that isn't supposed to exist: the Blackwater Ring.",
+  },
+  {
+    id: 4,
+    name: "The Blackwater Ring",
+    stageIds: [16, 17, 18, 19, 20],
+    intro:
+      "The Blackwater Ring has been running settlers off their land ahead of a silver strike, using hired guns to do it quietly. The ledgers point to a mining camp deep in the hills. The Sheriff rides to shut the operation down before another family loses their home.",
+    outro:
+      "Blackwater's foreman goes down swearing he was just hired help. The papers in his strongbox name the man who owns the Ring, and half the territory's troubles besides: a rancher named Cordell Vane.",
+  },
+  {
+    id: 5,
+    name: "Vane's Last Stand",
+    stageIds: [21, 22, 23, 24, 25],
+    intro:
+      "Every outlaw outfit on the trail, from the Cutter Gang to the railroad hijackers, was bought and paid for by Cordell Vane, working from a fortified ranch out past the territory line. The Sheriff rides for Vane's gate for the last fight of this whole ugly business.",
+    outro:
+      "Vane's ranch falls quiet. With its money gone, the outlaw economy that's plagued the territory for years finally dries up. The Sheriff rides home, and for the first time in a long while, the frontier is at peace.",
   },
 ];
 
