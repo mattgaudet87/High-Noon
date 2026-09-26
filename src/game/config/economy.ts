@@ -1,5 +1,5 @@
-export const STARTING_GRUB = 30;
-export const GRUB_PER_SECOND = 7;
+export const STARTING_GRUB = 45;
+export const GRUB_PER_SECOND = 10;
 
 export const DYNAMITE = {
   damage: 70,
