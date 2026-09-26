@@ -1,5 +1,6 @@
 import Phaser from "phaser";
-import { syncOnLoad } from "@/lib/save/cloud";
+import { migrateLegacySave } from "@/lib/save/local";
+import { syncAllSlots } from "@/lib/save/cloud";
 
 const GAME_WIDTH = 1280;
 const GAME_HEIGHT = 720;
@@ -7,6 +8,11 @@ const GAME_HEIGHT = 720;
 export class BootScene extends Phaser.Scene {
   constructor() {
     super("BootScene");
+  }
+
+  preload() {
+    this.load.image("bg-home", "/assets/home-bg.png");
+    this.load.image("bg-chapters", "/assets/chapters-bg.png");
   }
 
   create() {
@@ -20,8 +26,10 @@ export class BootScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    syncOnLoad().finally(() => {
-      this.scene.start("LevelSelectScene");
+    migrateLegacySave();
+
+    syncAllSlots().finally(() => {
+      this.scene.start("HomeScene");
     });
   }
 }

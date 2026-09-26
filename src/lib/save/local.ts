@@ -1,9 +1,14 @@
 import { UNITS, UnitKey } from "@/game/config/units";
 import { GLOBAL_UPGRADE_KEYS, GlobalUpgradeKey } from "@/game/config/globalUpgrades";
-import { SaveData } from "./types";
+import { SaveData, SlotId, SLOT_IDS } from "./types";
 
-const SAVE_KEY = "hn_save";
+const LEGACY_SAVE_KEY = "hn_save";
+const ACTIVE_SLOT_KEY = "hn_active_slot";
 const UNIT_KEYS = Object.keys(UNITS) as UnitKey[];
+
+function slotKey(slotId: SlotId): string {
+  return `hn_save_${slotId}`;
+}
 
 export const DEFAULT_SAVE: SaveData = {
   bounty: 0,
@@ -60,28 +65,75 @@ export function normalizeSave(data: Partial<SaveData>): SaveData {
   };
 }
 
-export function loadLocal(): SaveData {
+export function getActiveSlot(): SlotId {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return DEFAULT_SAVE;
-    return normalizeSave(JSON.parse(raw));
+    const raw = localStorage.getItem(ACTIVE_SLOT_KEY);
+    if (raw && SLOT_IDS.includes(raw as SlotId)) return raw as SlotId;
   } catch {
-    return DEFAULT_SAVE;
+    // localStorage unavailable, fall through to the default slot.
+  }
+  return "slot1";
+}
+
+export function setActiveSlot(slotId: SlotId): void {
+  try {
+    localStorage.setItem(ACTIVE_SLOT_KEY, slotId);
+  } catch {
+    // localStorage unavailable (private mode, blocked, etc). Game keeps running in memory.
   }
 }
 
-export function saveLocal(data: SaveData): SaveData {
+// Moves a save made before slots existed ("hn_save") into slot1, but only
+// if slot1 is still empty, so it never overwrites a slot the player already
+// has. Safe to call every boot.
+export function migrateLegacySave(): void {
+  try {
+    if (localStorage.getItem(slotKey("slot1"))) return;
+    const legacy = localStorage.getItem(LEGACY_SAVE_KEY);
+    if (!legacy) return;
+    localStorage.setItem(slotKey("slot1"), legacy);
+    localStorage.removeItem(LEGACY_SAVE_KEY);
+  } catch {
+    // localStorage unavailable. Nothing to migrate.
+  }
+}
+
+// Raw read of one slot. Returns null when the slot has never been saved to,
+// so callers (the Home screen) can tell an empty slot from a fresh save.
+export function loadSlotRaw(slotId: SlotId): SaveData | null {
+  try {
+    const raw = localStorage.getItem(slotKey(slotId));
+    if (!raw) return null;
+    return normalizeSave(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+export function loadLocal(slotId: SlotId = getActiveSlot()): SaveData {
+  return loadSlotRaw(slotId) ?? DEFAULT_SAVE;
+}
+
+export function saveLocal(data: SaveData, slotId: SlotId = getActiveSlot()): SaveData {
   const stamped = { ...data, updatedAt: Date.now() };
-  return overwriteLocal(stamped);
+  return overwriteLocal(stamped, slotId);
 }
 
 // Writes save data as-is, without touching updatedAt. Used when merging in a
 // cloud save that already carries the correct timestamp.
-export function overwriteLocal(data: SaveData): SaveData {
+export function overwriteLocal(data: SaveData, slotId: SlotId = getActiveSlot()): SaveData {
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    localStorage.setItem(slotKey(slotId), JSON.stringify(data));
   } catch {
     // localStorage unavailable (private mode, blocked, etc). Game keeps running in memory.
   }
   return data;
+}
+
+export function deleteSlotLocal(slotId: SlotId): void {
+  try {
+    localStorage.removeItem(slotKey(slotId));
+  } catch {
+    // localStorage unavailable. Nothing to delete.
+  }
 }

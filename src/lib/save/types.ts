@@ -12,3 +12,7 @@ export interface SaveData {
   };
   updatedAt: number;
 }
+
+export type SlotId = "slot1" | "slot2" | "slot3";
+
+export const SLOT_IDS: SlotId[] = ["slot1", "slot2", "slot3"];
