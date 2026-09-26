@@ -13,6 +13,9 @@ export class BootScene extends Phaser.Scene {
   preload() {
     this.load.image("bg-home", "/assets/home-bg.png");
     this.load.image("bg-chapters", "/assets/chapters-bg.png");
+    for (let levelId = 1; levelId <= 5; levelId++) {
+      this.load.image(`bg-chapter-${levelId}`, `/assets/chapter-${levelId}.png`);
+    }
   }
 
   create() {
