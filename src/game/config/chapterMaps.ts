@@ -1,8 +1,8 @@
 // Trail spots traced from each chapter's painted map, in 1280x720 game
-// space, ordered start to finish. The first 5 spots in each chapter are
-// today's real stages; the rest are shown as "Coming soon" so future stages
-// can drop into the trail without redrawing the map. The last spot is
-// always the Hideout.
+// space, ordered start to finish. Every spot is a real, playable stage
+// (see stageIds in config/levels.ts, which lists one stage id per spot in
+// order). The last spot in each chapter is always the Hideout: that
+// chapter's toughest fight.
 //
 // The order at trail forks is a best guess from the art; confirm with Matt
 // once he's seen the built map, and adjust here if a fork order looks wrong.

@@ -14,7 +14,7 @@ export const LEVELS: Level[] = [
   {
     id: 1,
     name: "The Cutter Gang",
-    stageIds: [1, 2, 3, 4, 5],
+    stageIds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
     intro:
       "A small-time outlaw gang has been raiding the frontier towns, hitting the bank and the stagecoach line. The Sheriff swears in a posse and rides out to push them back toward their hideout.",
     outro:
@@ -23,7 +23,7 @@ export const LEVELS: Level[] = [
   {
     id: 2,
     name: "The Vulture Syndicate",
-    stageIds: [6, 7, 8, 9, 10],
+    stageIds: [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27],
     intro:
       "The trail of stolen guns and cattle leads deeper into the badlands, to an outfit calling itself the Vulture Syndicate. They run the territory's rustling and gun-running from a stronghold in the rock. The Sheriff means to shut it down.",
     outro:
@@ -32,7 +32,7 @@ export const LEVELS: Level[] = [
   {
     id: 3,
     name: "The Iron Horse Cartel",
-    stageIds: [11, 12, 13, 14, 15],
+    stageIds: [28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45],
     intro:
       "The Iron Horse Cartel has been hijacking the new railroad, selling the guns and the payroll both. If they finish arming their outfit, no town on the line will be safe. The Sheriff rides for the rail depot for one last stand.",
     outro:
@@ -41,7 +41,7 @@ export const LEVELS: Level[] = [
   {
     id: 4,
     name: "The Blackwater Ring",
-    stageIds: [16, 17, 18, 19, 20],
+    stageIds: [46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57],
     intro:
       "The Blackwater Ring has been running settlers off their land ahead of a silver strike, using hired guns to do it quietly. The ledgers point to a mining camp deep in the hills. The Sheriff rides to shut the operation down before another family loses their home.",
     outro:
@@ -50,7 +50,7 @@ export const LEVELS: Level[] = [
   {
     id: 5,
     name: "Vane's Last Stand",
-    stageIds: [21, 22, 23, 24, 25],
+    stageIds: [58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71],
     intro:
       "Every outlaw outfit on the trail, from the Cutter Gang to the railroad hijackers, was bought and paid for by Cordell Vane, working from a fortified ranch out past the territory line. The Sheriff rides for Vane's gate for the last fight of this whole ugly business.",
     outro:
