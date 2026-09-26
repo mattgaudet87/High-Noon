@@ -9,7 +9,9 @@ import { drawShotgunner } from "@/game/art/shotgunner";
 import { drawSharpshooter } from "@/game/art/sharpshooter";
 import { drawDoc } from "@/game/art/doc";
 import { drawPowderman } from "@/game/art/powderman";
+import { drawBoss } from "@/game/art/boss";
 import { UNITS, UnitKey, UnitBehavior, COUNTERS, COUNTER_MULTIPLIER } from "@/game/config/units";
+import { getBossStats } from "@/game/config/boss";
 import { STARTING_GRUB, GRUB_PER_SECOND, DYNAMITE, RALLY_HORN } from "@/game/config/economy";
 import { GlobalUpgradeKey, getGlobalUpgradeMultiplier } from "@/game/config/globalUpgrades";
 import { STAGES, Stage } from "@/game/config/stages";
@@ -78,9 +80,14 @@ const DRAW_FUNCS: Record<
 
 const UNIT_KEYS = Object.keys(UNITS) as UnitKey[];
 
+// The boss guarding the Hideout isn't a deployable troop, so it lives outside
+// UnitKey (no shop entry, no save-file level) but still needs to sit in the
+// same battlefield unit list as everyone else.
+type BattleUnitKey = UnitKey | "boss";
+
 interface BattleUnit {
   team: "lawman" | "outlaw";
-  key: UnitKey;
+  key: BattleUnitKey;
   hp: number;
   maxHp: number;
   damage: number;
@@ -120,6 +127,8 @@ export class BattleScene extends Phaser.Scene {
   private hideoutBar!: Phaser.GameObjects.Graphics;
 
   private enemyAI!: EnemyAI;
+  private bossSpawned = false;
+  private bossBannerText!: Phaser.GameObjects.Text;
   private battleOver = false;
   private unitLevels!: Record<UnitKey, number>;
   private globalUpgrades!: Record<GlobalUpgradeKey, number>;
@@ -157,6 +166,7 @@ export class BattleScene extends Phaser.Scene {
     this.jailhouseHp = this.stage.jailhouseHp;
     this.hideoutHp = this.stage.hideoutHp;
     this.battleOver = false;
+    this.bossSpawned = false;
     this.enemyAI = new EnemyAI(this.stage);
     const save = loadLocal();
     this.unitLevels = save.unitLevels;
@@ -207,9 +217,17 @@ export class BattleScene extends Phaser.Scene {
 
     this.updateUnits(dt);
 
+    // Once the Hideout is bloodied past the halfway mark, it throws its one
+    // boss guard into the fight. Only ever happens once per battle.
+    if (!this.bossSpawned && this.hideoutHp > 0 && this.hideoutHp <= this.stage.hideoutHp * 0.5) {
+      this.bossSpawned = true;
+      this.spawnBoss();
+    }
+
     const lawmenOnField = this.units
       .filter((u) => u.team === "lawman")
-      .map((u) => u.key);
+      // The boss never fights for the lawmen, so this cast is safe.
+      .map((u) => u.key as UnitKey);
     this.enemyAI.update(dt, lawmenOnField, (key) =>
       this.spawnUnit(key, "outlaw", this.stage.enemyLevel)
     );
@@ -242,6 +260,16 @@ export class BattleScene extends Phaser.Scene {
         fontFamily: "monospace",
         fontSize: "36px",
         color: "#f5d76e",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5)
+      .setAlpha(0);
+
+    this.bossBannerText = this.add
+      .text(GAME_WIDTH / 2, 150, "", {
+        fontFamily: "monospace",
+        fontSize: "30px",
+        color: "#c0392b",
         fontStyle: "bold",
       })
       .setOrigin(0.5)
@@ -651,6 +679,58 @@ export class BattleScene extends Phaser.Scene {
     this.drawUnitHealthBar(unit);
   }
 
+  private spawnBoss() {
+    const stats = getBossStats(this.stage.enemyLevel);
+    const facing: 1 | -1 = -1;
+    const spawnX = HIDEOUT_X - UNIT_SPAWN_OFFSET;
+
+    const art = this.add.graphics();
+    drawBoss(art, 0, 0, facing);
+
+    const healthBar = this.add.graphics();
+
+    const role = getFormationRole(stats.range);
+    const lane = this.nextLane("outlaw", role);
+    const laneCount = LANES_PER_ROLE[role];
+    const laneOffsetY = (lane - (laneCount - 1) / 2) * LANE_SPACING_Y;
+
+    const container = this.add.container(spawnX, GROUND_Y + laneOffsetY, [art, healthBar]);
+
+    const unit: BattleUnit = {
+      team: "outlaw",
+      key: "boss",
+      hp: stats.hp,
+      maxHp: stats.hp,
+      damage: stats.damage,
+      range: stats.range,
+      speed: stats.speed,
+      attackCooldown: stats.attackCooldown,
+      cooldownRemaining: 0,
+      facing,
+      role,
+      lane,
+      container,
+      healthBar,
+      rallied: false,
+      behavior: "attack",
+    };
+
+    this.units.push(unit);
+    this.drawUnitHealthBar(unit);
+    this.showBossBanner(stats.name);
+  }
+
+  private showBossBanner(name: string) {
+    this.bossBannerText.setText(`${name.toUpperCase()} RIDES OUT!`);
+    this.bossBannerText.setAlpha(1);
+    this.tweens.add({
+      targets: this.bossBannerText,
+      alpha: 0,
+      duration: 1500,
+      delay: 800,
+    });
+  }
+
   private nextLane(team: "lawman" | "outlaw", role: FormationRole): number {
     const key = `${team}:${role}`;
     const count = this.laneCounters[key] ?? 0;
@@ -765,7 +845,13 @@ export class BattleScene extends Phaser.Scene {
 
   private attackUnit(attacker: BattleUnit, defender: BattleUnit) {
     let damage = attacker.damage;
-    if (COUNTERS[attacker.key] === defender.key) {
+    // The boss sits outside the counter cycle: it never counters and can
+    // never be countered.
+    if (
+      attacker.key !== "boss" &&
+      defender.key !== "boss" &&
+      COUNTERS[attacker.key] === defender.key
+    ) {
       damage *= COUNTER_MULTIPLIER;
     }
     defender.hp = Math.max(0, defender.hp - damage);
