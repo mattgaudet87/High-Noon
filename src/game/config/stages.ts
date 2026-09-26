@@ -118,7 +118,7 @@ export const STAGES: Stage[] = [
     enemyLevel: 5,
     hideoutHp: 1550,
     jailhouseHp: 400,
-    firstClearBounty: 260,
+    firstClearBounty: 270,
   },
   {
     id: 12,
@@ -128,7 +128,7 @@ export const STAGES: Stage[] = [
     enemyLevel: 5,
     hideoutHp: 1700,
     jailhouseHp: 380,
-    firstClearBounty: 290,
+    firstClearBounty: 310,
   },
   {
     id: 13,
@@ -138,7 +138,7 @@ export const STAGES: Stage[] = [
     enemyLevel: 5,
     hideoutHp: 1850,
     jailhouseHp: 380,
-    firstClearBounty: 320,
+    firstClearBounty: 355,
   },
   {
     id: 14,
@@ -148,7 +148,7 @@ export const STAGES: Stage[] = [
     enemyLevel: 5,
     hideoutHp: 2000,
     jailhouseHp: 360,
-    firstClearBounty: 360,
+    firstClearBounty: 405,
   },
   {
     id: 15,
@@ -158,7 +158,7 @@ export const STAGES: Stage[] = [
     enemyLevel: 5,
     hideoutHp: 2200,
     jailhouseHp: 360,
-    firstClearBounty: 400,
+    firstClearBounty: 460,
   },
 ];
 
