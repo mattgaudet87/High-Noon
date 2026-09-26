@@ -15,6 +15,18 @@ export class BootScene extends Phaser.Scene {
     this.load.image("bg-chapters", "/assets/chapters-bg.png");
     for (let levelId = 1; levelId <= 5; levelId++) {
       this.load.image(`bg-chapter-${levelId}`, `/assets/chapter-${levelId}.png`);
+      this.load.image(`bg-battle-${levelId}`, `/assets/battle-bg-${levelId}.png`);
+    }
+    for (const unitKey of [
+      "brawler",
+      "gunslinger",
+      "rider",
+      "shotgunner",
+      "sharpshooter",
+      "doc",
+      "powderman",
+    ]) {
+      this.load.image(`portrait-${unitKey}`, `/assets/portrait-${unitKey}.png`);
     }
   }
 

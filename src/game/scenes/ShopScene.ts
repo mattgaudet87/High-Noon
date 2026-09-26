@@ -9,13 +9,6 @@ import {
   GlobalUpgradeKey,
   getGlobalUpgradeMultiplier,
 } from "@/game/config/globalUpgrades";
-import { drawBrawler } from "@/game/art/brawler";
-import { drawGunslinger } from "@/game/art/gunslinger";
-import { drawRider } from "@/game/art/rider";
-import { drawShotgunner } from "@/game/art/shotgunner";
-import { drawSharpshooter } from "@/game/art/sharpshooter";
-import { drawDoc } from "@/game/art/doc";
-import { drawPowderman } from "@/game/art/powderman";
 import { loadLocal, saveLocal } from "@/lib/save/local";
 import { pushCloudSave } from "@/lib/save/cloud";
 import { SaveData } from "@/lib/save/types";
@@ -25,25 +18,9 @@ const GAME_HEIGHT = 720;
 
 const UNIT_KEYS = Object.keys(UNITS) as UnitKey[];
 
-const DRAW_FUNCS: Record<
-  UnitKey,
-  (
-    graphics: Phaser.GameObjects.Graphics,
-    x: number,
-    y: number,
-    facing: 1 | -1,
-    level: number,
-    team: "lawman" | "outlaw"
-  ) => void
-> = {
-  brawler: drawBrawler,
-  gunslinger: drawGunslinger,
-  rider: drawRider,
-  shotgunner: drawShotgunner,
-  sharpshooter: drawSharpshooter,
-  doc: drawDoc,
-  powderman: drawPowderman,
-};
+// Card portrait box: images are contain-fit inside this so every troop's
+// picture reads at the same size no matter its original aspect ratio.
+const PORTRAIT_BOX = 150;
 
 // Cards flow into rows of up to 4, so the shop keeps working however many
 // troop types the game has.
@@ -99,7 +76,7 @@ export class ShopScene extends Phaser.Scene {
     Record<
       UnitKey,
       {
-        art: Phaser.GameObjects.Graphics;
+        art: Phaser.GameObjects.Image;
         levelText: Phaser.GameObjects.Text;
         statsText: Phaser.GameObjects.Text;
         buttonBg: Phaser.GameObjects.Rectangle;
@@ -194,8 +171,9 @@ export class ShopScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const art = this.add.graphics();
-    art.setPosition(x, y - 20);
+    const art = this.add.image(x, y - 20, `portrait-${key}`);
+    const artScale = Math.min(PORTRAIT_BOX / art.width, PORTRAIT_BOX / art.height);
+    art.setDisplaySize(art.width * artScale, art.height * artScale);
 
     const levelText = this.add.text(x, y + 28, "", {
       fontFamily: "monospace",
@@ -328,9 +306,6 @@ export class ShopScene extends Phaser.Scene {
 
       const level = this.save.unitLevels[key];
       const stats = getUnitStats(key, level);
-
-      refs.art.clear();
-      DRAW_FUNCS[key](refs.art, 0, 0, 1, level, "lawman");
 
       refs.levelText.setText(`Level ${level}`);
 

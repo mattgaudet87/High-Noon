@@ -1,5 +1,4 @@
 import Phaser from "phaser";
-import { drawBackdrop } from "@/game/art/backdrop";
 import { drawJailhouse } from "@/game/art/jailhouse";
 import { drawHideout } from "@/game/art/hideout";
 import { drawBrawler } from "@/game/art/brawler";
@@ -178,8 +177,12 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create() {
+    const levelId = getLevelForStage(this.stageId)?.id ?? 1;
+    const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, `bg-battle-${levelId}`);
+    const bgScale = Math.max(GAME_WIDTH / bg.width, GAME_HEIGHT / bg.height);
+    bg.setDisplaySize(bg.width * bgScale, bg.height * bgScale);
+
     const graphics = this.add.graphics();
-    drawBackdrop(graphics);
 
     drawJailhouse(graphics, JAILHOUSE_X, BUILDING_BASE_Y);
     drawHideout(graphics, HIDEOUT_X, BUILDING_BASE_Y);
